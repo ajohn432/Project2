@@ -86,6 +86,12 @@ void graph_test(char *graph_name)
 	//I allocate memory for it, then set everythint to 0, the fill it out using the loop mentioned earlier
 	
 	printf("test\n");
+	
+	char** line;
+	int num_vertices, num_edges;
+	char type_of_graph;
+
+
 }
 
 
