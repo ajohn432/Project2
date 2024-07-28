@@ -87,10 +87,70 @@ void graph_test(char *graph_name)
 	
 	printf("test\n");
 	//This is var declaration
-	char** line;
+	char* buffer[20];
+	char* graphinfo[20];
 	int num_vertices, num_edges;
 	char type_of_graph;
+	int vertices, edges;
 
+
+	if (fgets(graphinfo, sizeof(graphinfo), f) == NULL)
+	{
+		printf("fgets had an error\n");
+		return;
+	}
+		
+	sscanf(graphinfo, "%d %d %c", &vertices, &edges, &type_of_graph);
+	
+	//This line creates the array of integer pointers
+	//We will be mallocating the array itself quite soon my good sir / mam TA
+	int** adjacency_matrix = (int**)malloc(num_vertices * sizeof(int*));
+	//I literally starting calling it mallocate its joever
+	//
+
+	for (int i = 0; i < vertices; i++)
+	{
+		//Create the memory space for each row
+		adjacency_matrix[i] = (int*)malloc(num_vertices * sizeof(int));
+		if (adjacency_matrix[i] == NULL)
+		{
+			for (int j = 0; j < i; j++)
+			{
+				free(adjacency_matrix[j]);
+			}
+			free(adjacency_matrix);
+			printf("Somehow a disaster occured while allocating memory for the 1d arrays inside of adjacency_matrix\n");
+			return;
+		}
+	}
+	
+	//
+	//IMPORTANT
+	//
+	//THERE ARE 2 PROBLEMATIC ASSUMPTIONS WITH THIS CODE. THE CODE BELOW ONLY WORKS IF THE EDGES VALUE FOR HOW MANY
+	//EDGES ARE CONTAINED INSIDE OF THE FILE IS CORRECT. IF THIS IS INCORRECT, NULL POINTER EXCEPTION WILL OCCUR
+	//
+	//ALSO, IF THERE ARE MULTIPLE EDGES BETWEEN 2 VERTICES IT WILL OVERIDE THE EARLIER EDGE
+	//
+	//ALSO THE CODE ASSUMES THE bruh
+	//
+	//If i have time I plan to fix this, but this might end up being a bug in the final project due to time constraints
+	//
+	for (int i = 0; i < edges; i++)
+	{
+		if (fgets(buffer, sizeof(buffer), f) == NULL)
+		{
+			printf("Why is there numbers adding to over 20 characters bruh i did not design this for that xddd");
+			return;
+		}
+
+		char vertice1, vertice2;
+		int weight;
+		sscanf(buffer, "%c, %c, %d", &vertice1, &vertice2, &weight);
+		
+		
+
+	}
 
 }
 
