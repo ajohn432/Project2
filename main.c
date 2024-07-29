@@ -2,7 +2,76 @@
 #include <stdlib.h>
 #include <string.h>
 
+
 void graph_test(char *graph_name);
+
+typedef struct Edge
+{
+	int target;
+	int weight;
+	struct Edge* next;
+} Edge;
+typedef struct Vertex
+{
+	int id;
+	Edge* edge_list;
+} Vertex;
+typedef struct Graph
+{
+	int num_vertices;
+	char graph_type; //D is directed, U is undirected
+	Vertex* vertices;
+} Graph;
+
+Graph* create_graph(int num_vertices, int graph_type)
+{
+	Graph* graph = (Graph*)malloc(sizeof(Graph));
+	graph->num_vertices = num_vertices;
+	graph->graph_type = graph_type;
+	graph->vertices = (Vertex*)malloc(num_vertices*sizeof(Vertex));
+
+	for (int i = 0; i < num_vertices; i++)
+	{
+		graph->vertices[i].id = i;
+		graph->vertoces[i].edgeList = NULL;
+	}
+	return graph;
+}
+
+void add_edge(Graph* graph, int source, int target, int weight)
+{
+	Edge* newEdge = (Edge*)malloc(sizeof(Edge));
+	newEdge->target = target;
+	newEdge->weight = weight;
+	newEdge->next = graph->vertices[source].edge_list;
+	graph->vertices[source].edge_list = newEdge;
+
+	if (graph->graph_type == 'U')
+	{
+		Edge* undirected_edge = (Edge*)malloc(sizeof(Edge));
+		undirected_edge->target = source;
+		undirected_edge->weight = weight;
+		undirected_edge->next = graph->vertices[target].edge_list;
+		graph->vertices[target].edge_list = undirected_edge;
+	}
+}
+
+void print_graph(Graph* graph, char* arr)
+{
+	printf("-----------Here is the graph---------\n");
+	for (int i = 0; i < graph->num_vertices; i++)
+	{
+		Vertex vertex = graph->vertices[i];
+		printf("Vertex %c: \n", arr[i]);
+		Edge* edge = vertex.edge_list;
+		while (edge)
+		{
+			printf(" ---> %c (Weight: %d)\n", arr[edge->target], edge->weight);
+			edge = edge->next;
+		}
+		printf("\n");
+	}
+}
 
 //Main method, basically takes in cmd line arguements and runs the code
 int main(int argc, char **argv)
