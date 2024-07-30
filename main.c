@@ -1,9 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
 #define ALPHABET 26
 
-void graph_test(char *graph_name);
 
 typedef struct Edge
 {
@@ -24,6 +24,10 @@ typedef struct Graph
 	int* label_to_index;
 } Graph;
 
+void dijkstra(Graph* graph, char source_label);
+void graph_test(char *graph_name);
+void print_path(int* prev, int target, Graph* graph);
+void prim(Graph* graph);
 void add_vertex(Graph* graph, char label, int index)
 {
 	if (index >= graph->num_vertices) return;
@@ -38,8 +42,8 @@ Graph* create_graph(int num_vertices, char graph_type)
 	graph->num_vertices = num_vertices;
 	graph->graph_type = graph_type;
 	graph->vertices = (Vertex*)malloc(num_vertices*sizeof(Vertex));
-	graph->label_to_index = (int*)malloc(sizeof(int)*num_vertices);
-	for (int i = 0; i < num_vertices; i++)
+	graph->label_to_index = (int*)malloc(sizeof(int)*ALPHABET);
+	for (int i = 0; i < ALPHABET; i++)
 	{
 		graph->label_to_index[i] = -1;
 	}
@@ -71,22 +75,18 @@ void add_edge(Graph* graph, char source_label, char target_label, int weight)
 
 void print_graph(Graph* graph)
 {
-	printf("-----------Here is the graph---------\n");
-	for (int i = 0; i < ALPHABET; i++)
-	{
-		if (graph->label_to_index[i]!=-1)
-		{
-			Vertex vertex = graph->vertices[i];
-			printf("Vertex %c: \n", vertex.label);
-			Edge* edge = vertex.edge_list;
-			while (edge)
-			{
-				printf(" ---> %c (Weight: %d)\n", graph->vertices[edge->target].label, edge->weight);
-				edge = edge->next;
-			}
-			printf("\n");
-		}
-	}
+    for (int i = 0; i < graph->num_vertices; i++)
+    {
+        Vertex v = graph->vertices[i];
+        printf("Vertex %c: \n", v.label);
+        Edge* edge = v.edge_list;
+        while (edge != NULL)
+        {
+            printf("  -> %c(weight=%d) \n", graph->vertices[edge->target].label, edge->weight);
+            edge = edge->next;
+        }
+        printf("\n");
+    }
 }
 
 //Main method, basically takes in cmd line arguements and runs the code
@@ -111,27 +111,14 @@ int main(int argc, char **argv)
 		"Below are the results for the class assignment: \n");
 		
 		//Running the graph_test file for each graph
-		for (int i = 0; i < argc - 1; i++)
+		for (int i = 1; i < argc; i++)
 		{
+			printf("-----------------------------------------------\n");
+			printf("Graph %d tested below:\n", i);
 			graph_test(argv[i]);
 			// cp this to graphtest printf("\n------------------------------------------------------\n");
 		}
 		
-		//asking the user if they want to try another graph they provided, i only provided 4 in my code
-		_Bool wouldyouliketogoagain = 1; //True
-		while (0)//wouldyouliketogoagain == 1)
-		{
-			//printf("Would you like to test another graph?\n");
-			//wouldyouliketogoagain = false;
-			// if (user says yes)
-			// {
-			// 	wouldyouliketogoagain = true;
-			// 	printf("Please provide another filename to test");
-			// 	userinput xddd forgor
-			// 	graph_test("%s", userinput);
-			// }
-			//
-		}
 
 	}
 	else 
@@ -170,7 +157,6 @@ void graph_test(char *graph_name)
 	//First i initialize the array using the given vertices #, and edges aren't important in this.
 	//I allocate memory for it, then set everythint to 0, the fill it out using the loop mentioned earlier
 	
-	printf("test\n");
 	//This is var declaration
 	char buffer[20];
 	char graphinfo[20];
@@ -193,7 +179,7 @@ void graph_test(char *graph_name)
 	sscanf(graphinfo, "%d %d %c", &num_vertices, &num_edges, &type_of_graph);
 	
 	printf("%d %d %c", num_vertices, num_edges, type_of_graph);
-	Graph* graph = create_graph(num_vertices, type_of_graph);
+	Graph* graph = create_graph(num_vertices, type_of_graph);	
 
 	for (int i = 0; i < num_edges; i++)
 	{
@@ -213,12 +199,169 @@ void graph_test(char *graph_name)
 		}
 		if (graph->label_to_index[target_label - 'A'] == -1)
 		{
-			add_vertex(graph, source_label, index);
+			add_vertex(graph, target_label, index);
 			index++;
 		}
 		//adding edge
 		add_edge(graph, source_label, target_label, weight);
 	}
+	
+	fseek(f, -1, SEEK_END);
+	fgets(buffer, sizeof(buffer), f);
+	char o = buffer[0];
+	fclose(f);
+	printf("%c", o);
 	print_graph(graph);
+
+	dijkstra(graph, o);
+	printf("\n\n\n\n");
+
+	if (graph->graph_type == 'U')
+	{
+		printf("This graph is unweighted. Runnings prim's algorithm:\n");
+		prim(graph);
+	}
+	else
+	{
+		printf("This graph is weighted, prims algo will not be ran.\n");
+	}
+	
 }
 
+void print_path(int* prev, int target, Graph* graph) {
+    if (prev[target] == -1) {
+        printf("%c", graph->vertices[target].label);
+        return;
+    }
+    print_path(prev, prev[target], graph);
+    printf(" -> %c", graph->vertices[target].label);
+}
+
+void dijkstra(Graph* graph, char source_label) {
+    int num_vertices = graph->num_vertices;
+    int source_index = graph->label_to_index[source_label - 'A'];
+
+    // Dynamically allocate arrays for distances, visited status, and predecessors
+    int *dist = (int *)malloc(num_vertices * sizeof(int));
+    bool *visited = (bool *)malloc(num_vertices * sizeof(bool));
+    int *prev = (int *)malloc(num_vertices * sizeof(int)); // Predecessor array
+
+    // Initialize distances, visited status, and predecessors
+    for (int i = 0; i < num_vertices; i++) {
+        dist[i] = 1000000; // INF
+        visited[i] = false; // Initialize all vertices as unvisited
+        prev[i] = -1; // No predecessor
+    }
+
+    // Distance to the source vertex is 0
+    dist[source_index] = 0;
+
+    // Main loop to find the shortest path for all vertices
+    for (int count = 0; count < num_vertices - 1; count++) {
+        // Find the vertex with the minimum distance from the set of vertices not yet processed
+        int min_dist = 1000000; // INF
+        int min_index = -1;
+
+        for (int v = 0; v < num_vertices; v++) {
+            if (!visited[v] && dist[v] <= min_dist) {
+                min_dist = dist[v];
+                min_index = v;
+            }
+        }
+
+        if (min_index == -1) break; // All remaining vertices are inaccessible
+
+        // Mark the picked vertex as processed
+        visited[min_index] = true;
+
+        // Update dist value of the adjacent vertices of the picked vertex
+        Edge* edge = graph->vertices[min_index].edge_list;
+        while (edge != NULL) {
+            int target = edge->target;
+            int weight = edge->weight;
+
+            if (!visited[target] && dist[min_index] + weight < dist[target]) {
+                dist[target] = dist[min_index] + weight;
+                prev[target] = min_index; // Update predecessor
+            }
+
+            edge = edge->next;
+        }
+    }
+
+    // Print the constructed distance array and paths
+    printf("Vertex\tDistance from Source\tPath\n");
+    for (int i = 0; i < num_vertices; i++) {
+        printf("%c\t%d\t\t\t", graph->vertices[i].label, dist[i]);
+        if (dist[i] < 1000000) { // Check if the vertex is reachable
+            print_path(prev, i, graph);
+        } else {
+            printf("No path");
+        }
+        printf("\n");
+    }
+
+    // Free dynamically allocated memory
+    free(dist);
+    free(visited);
+    free(prev);
+}
+
+void prim(Graph* graph) {
+    int num_vertices = graph->num_vertices;
+    int* parent = (int*)malloc(num_vertices * sizeof(int));  // Array to store constructed MST
+    int* key = (int*)malloc(num_vertices * sizeof(int));     // Key values to pick minimum weight edge
+    bool* in_mst = (bool*)malloc(num_vertices * sizeof(bool)); // To represent set of vertices not yet included in MST
+
+    // Initialize all keys as INFINITE and in_mst[] as false
+    for (int i = 0; i < num_vertices; i++) {
+        key[i] = 1000000;
+        in_mst[i] = false;
+    }
+
+    // Always include first vertex in MST
+    key[0] = 0;      // Make key 0 so that this vertex is picked as the first vertex
+    parent[0] = -1;  // First node is always root of MST
+
+    for (int count = 0; count < num_vertices - 1; count++) {
+        // Pick the minimum key vertex from the set of vertices not yet included in MST
+        int min = 1000000, min_index;
+
+        for (int v = 0; v < num_vertices; v++)
+            if (in_mst[v] == false && key[v] < min)
+                min = key[v], min_index = v;
+
+        // Add the picked vertex to the MST set
+        int u = min_index;
+        in_mst[u] = true;
+
+        // Update key value and parent index of the adjacent vertices of the picked vertex.
+        // Consider only those vertices which are not yet included in MST
+        Edge* edge = graph->vertices[u].edge_list;
+        while (edge != NULL) {
+            int v = edge->target;
+
+            // Update the key only if this edge weight is smaller than key[v]
+            if (in_mst[v] == false && edge->weight < key[v]) {
+                parent[v] = u;
+                key[v] = edge->weight;
+            }
+
+            edge = edge->next;
+        }
+    }
+
+    // Print the constructed MST
+    int total_weight = 0;
+    printf("Edge \tWeight\n");
+    for (int i = 1; i < num_vertices; i++) {
+        printf("%c - %c \t%d \n", graph->vertices[parent[i]].label, graph->vertices[i].label, key[i]);
+        total_weight += key[i];
+    }
+    printf("Total weight of MST: %d\n", total_weight);
+
+    // Free allocated memory
+    free(parent);
+    free(key);
+    free(in_mst);
+}
