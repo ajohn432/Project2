@@ -300,7 +300,7 @@ void dijkstra(Graph* graph, char source_label)
         printf("\n");
     }
 
-    // Free dynamically allocated memory
+    // FREE THE PEASANTS
     free(dist);
     free(visited);
     free(prev);
@@ -309,42 +309,33 @@ void dijkstra(Graph* graph, char source_label)
 void prim(Graph* graph)
 {
     int num_vertices = graph->num_vertices;
-    int* parent = (int*)malloc(num_vertices * sizeof(int)); // Array to store constructed MST
-    int* key = (int*)malloc(num_vertices * sizeof(int)); // Key values to pick minimum weight edge
-    bool* in_mst = (bool*)malloc(num_vertices * sizeof(bool)); // To represent set of vertices not yet included in MST
+    int* parent = (int*)malloc(num_vertices * sizeof(int)); 
+    int* key = (int*)malloc(num_vertices * sizeof(int)); 
+    bool* in_mst = (bool*)malloc(num_vertices * sizeof(bool)); 
 
-    // Initialize all keys as INFINITE and in_mst[] as false
     for (int i = 0; i < num_vertices; i++)
     {
         key[i] = 1000000;
         in_mst[i] = false;
     }
 
-    // Always include first vertex in MST
-    key[0] = 0; // Make key 0 so that this vertex is picked as the first vertex
-    parent[0] = -1; // First node is always root of MST
+    key[0] = 0; 
+    parent[0] = -1; 
 
     for (int count = 0; count < num_vertices - 1; count++)
     {
-        // Pick the minimum key vertex from the set of vertices not yet included in MST
         int min = 1000000, min_index;
 
         for (int v = 0; v < num_vertices; v++)
             if (in_mst[v] == false && key[v] < min)
                 min = key[v], min_index = v;
-
-        // Add the picked vertex to the MST set
         int u = min_index;
         in_mst[u] = true;
 
-        // Update key value and parent index of the adjacent vertices of the picked vertex.
-        // Consider only those vertices which are not yet included in MST
         Edge* edge = graph->vertices[u].edge_list;
         while (edge != NULL)
         {
             int v = edge->target;
-
-            // Update the key only if this edge weight is smaller than key[v]
             if (in_mst[v] == false && edge->weight < key[v])
             {
                 parent[v] = u;
@@ -355,7 +346,6 @@ void prim(Graph* graph)
         }
     }
 
-    // Print the constructed MST
     int total_weight = 0;
     printf("Edge \tWeight\n");
     for (int i = 1; i < num_vertices; i++)
@@ -365,7 +355,7 @@ void prim(Graph* graph)
     }
     printf("Total weight of MST: %d\n", total_weight);
 
-    // Free allocated memory
+    // FREE THE PEASANTS ONCE AGAIN
     free(parent);
     free(key);
     free(in_mst);
