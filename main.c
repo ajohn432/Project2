@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
+#define ALPHABET 26
 
 void graph_test(char *graph_name);
 
@@ -13,7 +13,7 @@ typedef struct Edge
 } Edge;
 typedef struct Vertex
 {
-	int id;
+	char label;
 	Edge* edge_list;
 } Vertex;
 typedef struct Graph
@@ -21,55 +21,70 @@ typedef struct Graph
 	int num_vertices;
 	char graph_type; //D is directed, U is undirected
 	Vertex* vertices;
+	int* label_to_index;
 } Graph;
 
-Graph* create_graph(int num_vertices, int graph_type)
+void add_vertex(Graph* graph, char label, int index)
+{
+	if (index >= graph->num_vertices) return;
+	graph->vertices[index].label = label;
+	graph->vertices[index].edge_list = NULL;
+	graph->label_to_index[label - 'A'] = index;
+}
+
+Graph* create_graph(int num_vertices, char graph_type)
 {
 	Graph* graph = (Graph*)malloc(sizeof(Graph));
 	graph->num_vertices = num_vertices;
 	graph->graph_type = graph_type;
 	graph->vertices = (Vertex*)malloc(num_vertices*sizeof(Vertex));
-
 	for (int i = 0; i < num_vertices; i++)
 	{
-		graph->vertices[i].id = i;
-		graph->vertoces[i].edgeList = NULL;
+		graph->label_to_index[i] = -1;
 	}
 	return graph;
 }
 
-void add_edge(Graph* graph, int source, int target, int weight)
+void add_edge(Graph* graph, char source_label, char target_label, int weight)
 {
+	int source_index = graph->label_to_index[source_label - 'A'];
+	int target_index = graph->label_to_index[target_label - 'A'];
+	
+	if (source_index < 0 || target_index < 0) return;
+
 	Edge* newEdge = (Edge*)malloc(sizeof(Edge));
-	newEdge->target = target;
+	newEdge->target = target_index;
 	newEdge->weight = weight;
-	newEdge->next = graph->vertices[source].edge_list;
-	graph->vertices[source].edge_list = newEdge;
+	newEdge->next = graph->vertices[source_index].edge_list;
+	graph->vertices[source_index].edge_list = newEdge;
 
 	if (graph->graph_type == 'U')
 	{
 		Edge* undirected_edge = (Edge*)malloc(sizeof(Edge));
-		undirected_edge->target = source;
+		undirected_edge->target = source_index;
 		undirected_edge->weight = weight;
-		undirected_edge->next = graph->vertices[target].edge_list;
-		graph->vertices[target].edge_list = undirected_edge;
+		undirected_edge->next = graph->vertices[target_index].edge_list;
+		graph->vertices[target_index].edge_list = undirected_edge;
 	}
 }
 
-void print_graph(Graph* graph, char* arr)
+void print_graph(Graph* graph)
 {
 	printf("-----------Here is the graph---------\n");
-	for (int i = 0; i < graph->num_vertices; i++)
+	for (int i = 0; i < ALPHABET; i++)
 	{
-		Vertex vertex = graph->vertices[i];
-		printf("Vertex %c: \n", arr[i]);
-		Edge* edge = vertex.edge_list;
-		while (edge)
+		if (graph->label_to_index[i]!=-1)
 		{
-			printf(" ---> %c (Weight: %d)\n", arr[edge->target], edge->weight);
-			edge = edge->next;
+			Vertex vertex = graph->vertices[i];
+			printf("Vertex %c: \n", vertex.label);
+			Edge* edge = vertex.edge_list;
+			while (edge)
+			{
+				printf(" ---> %c (Weight: %d)\n", graph->vertices[edge->target].label, edge->weight);
+				edge = edge->next;
+			}
+			printf("\n");
 		}
-		printf("\n");
 	}
 }
 
@@ -144,7 +159,7 @@ void graph_test(char *graph_name)
 	//If file doesn't exist, gracefully exit the method. Should only happen on user inputted files.
 	if (f == NULL)
 	{
-		printf("Somehow, the file %s was not found. This file will be skipped.\n");
+		printf("Somehow, the file %s was not found. This file will be skipped.\n", graph_name);
 		perror(graph_name);
 	}
 
@@ -156,88 +171,53 @@ void graph_test(char *graph_name)
 	
 	printf("test\n");
 	//This is var declaration
-	char* buffer[20];
-	char* graphinfo[20];
+	char buffer[20];
+	char graphinfo[20];
+
 	int num_vertices, num_edges;
 	char type_of_graph;
-	int vertices, edges;
+	int index = 0;
 
+	int weight;
+	char source_label;
+	char target_label;
+	
 
 	if (fgets(graphinfo, sizeof(graphinfo), f) == NULL)
 	{
 		printf("fgets had an error\n");
 		return;
 	}
-		
-	sscanf(graphinfo, "%d %d %c", &vertices, &edges, &type_of_graph);
 	
-	//This line creates the array of integer pointers
-	//We will be mallocating the array itself quite soon my good sir / mam TA
-	int** adjacency_matrix = (int**)malloc(num_vertices * sizeof(int*));
-	//I literally starting calling it mallocate its joever
-	//
+	sscanf(graphinfo, "%d %d %c", &num_vertices, &num_edges, &type_of_graph);
+	
+	printf("%d %d %c", num_vertices, num_edges, type_of_graph);
+	Graph* graph = create_graph(num_vertices, type_of_graph);
 
-	for (int i = 0; i < vertices; i++)
-	{
-		//Create the memory space for each row
-		adjacency_matrix[i] = (int*)malloc(num_vertices * sizeof(int));
-		if (adjacency_matrix[i] == NULL)
-		{
-			for (int j = 0; j < i; j++)
-			{
-				free(adjacency_matrix[j]);
-			}
-			free(adjacency_matrix);
-			printf("Somehow a disaster occured while allocating memory for the 1d arrays inside of adjacency_matrix\n");
-			return;
-		}
-	}
-	
-	//
-	//IMPORTANT
-	//
-	//THERE ARE 2 PROBLEMATIC ASSUMPTIONS WITH THIS CODE. THE CODE BELOW ONLY WORKS IF THE EDGES VALUE FOR HOW MANY
-	//EDGES ARE CONTAINED INSIDE OF THE FILE IS CORRECT. IF THIS IS INCORRECT, NULL POINTER EXCEPTION WILL OCCUR
-	//
-	//ALSO, IF THERE ARE MULTIPLE EDGES BETWEEN 2 VERTICES IT WILL OVERIDE THE EARLIER EDGE
-	//
-	//ALSO THE CODE ASSUMES THE bruh
-	//
-	//If i have time I plan to fix this, but this might end up being a bug in the final project due to time constraints
-	//
-	for (int i = 0; i < edges; i++)
+	for (int i = 0; i < num_edges; i++)
 	{
 		if (fgets(buffer, sizeof(buffer), f) == NULL)
 		{
 			printf("Why is there numbers adding to over 20 characters bruh i did not design this for that xddd");
 			return;
 		}
-
-		char vertice1, vertice2;
-		int weight;
-		sscanf(buffer, "%c, %c, %d", &vertice1, &vertice2, &weight);
-		
-		
-
+			
+		sscanf(buffer, "%c %c %d", &source_label, &target_label, &weight);
+			
+		//adding new vertices
+		if (graph->label_to_index[source_label - 'A'] == -1)
+		{
+			add_vertex(graph, source_label, index);
+			index++;
+		}
+		if (graph->label_to_index[target_label - 'A'] == -1)
+		{
+			add_vertex(graph, source_label, index);
+			index++;
+		}
+		//adding edge
+		add_edge(graph, source_label, target_label, weight);
 	}
-
+	print_graph(graph);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
