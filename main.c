@@ -38,6 +38,7 @@ Graph* create_graph(int num_vertices, char graph_type)
 	graph->num_vertices = num_vertices;
 	graph->graph_type = graph_type;
 	graph->vertices = (Vertex*)malloc(num_vertices*sizeof(Vertex));
+	graph->label_to_index = (int*)malloc(sizeof(int)*num_vertices);
 	for (int i = 0; i < num_vertices; i++)
 	{
 		graph->label_to_index[i] = -1;
